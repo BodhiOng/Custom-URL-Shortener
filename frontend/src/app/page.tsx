@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -10,6 +10,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [duplicateError, setDuplicateError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,11 +34,24 @@ export default function Home() {
       //   body: JSON.stringify({ longUrl, customAlias }),
       // });
       // const data = await response.json();
+      // if (data.error === 'DUPLICATE_ALIAS') {
+      //   setDuplicateError(`The alias "${customAlias}" is already in use. Please choose a different one.`);
+      //   setShowDuplicateModal(true);
+      //   return;
+      // }
       
-      // Mock response
+      // Mock response - simulate duplicate alias check
       await new Promise(resolve => setTimeout(resolve, 500));
-      const mockShortUrl = `short.url/${customAlias || Math.random().toString(36).substring(2, 7)}`;
       
+      // For demo purposes, let's pretend 'test' is already taken
+      if (customAlias === 'test') {
+        setDuplicateError(`The alias "${customAlias}" is already in use. Please choose a different one.`);
+        setShowDuplicateModal(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      const mockShortUrl = `short.url/${customAlias || Math.random().toString(36).substring(2, 7)}`;
       setShortUrl(mockShortUrl);
     } catch (err) {
       setError('Failed to create short URL. Please try again.');
@@ -50,9 +65,57 @@ export default function Home() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+  
+  const closeDuplicateModal = () => {
+    setShowDuplicateModal(false);
+    setCustomAlias('');
+  };
 
   return (
     <div className="flex flex-col items-center min-h-screen p-4 sm:p-8 bg-gray-50">
+      {/* Duplicate URL Modal */}
+      {showDuplicateModal && (
+        <>
+          {/* Background overlay */}
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-40"></div>
+          
+          {/* Modal container */}
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen p-4 text-center">
+              {/* This element is to trick the browser into centering the modal contents. */}
+              <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+              
+              {/* Modal panel */}
+              <div className="relative inline-block align-middle bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full">
+                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                      <svg className="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900">Duplicate Short URL</h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500">{duplicateError}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="button"
+                    onClick={closeDuplicateModal}
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
       <header className="w-full max-w-4xl flex justify-between items-center py-4">
         <div className="flex items-center">
           <svg 
@@ -145,21 +208,50 @@ export default function Home() {
             </form>
             
             {shortUrl && (
-              <div className="mt-6 p-4 bg-blue-50 rounded-md">
-                <p className="text-sm text-gray-600 mb-2">Your shortened URL:</p>
-                <div className="flex">
-                  <input
-                    type="text"
-                    value={shortUrl}
-                    readOnly
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-l-md bg-white"
-                  />
-                  <button
-                    onClick={copyToClipboard}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600 transition-colors"
-                  >
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
+              <div className="mt-6">
+                {/* Tab-like display for the shortened URL */}
+                <div className="border border-gray-300 rounded-md overflow-hidden">
+                  {/* Tab header */}
+                  <div className="bg-gray-100 px-4 py-2 border-b border-gray-300">
+                    <h3 className="font-medium text-gray-700">Your Shortened URL</h3>
+                  </div>
+                  
+                  {/* Tab content */}
+                  <div className="p-4 bg-white">
+                    <div className="flex mb-4">
+                      <input
+                        type="text"
+                        value={shortUrl}
+                        readOnly
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-l-md bg-white text-gray-700"
+                      />
+                      <button
+                        onClick={copyToClipboard}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600 transition-colors"
+                      >
+                        {copied ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center text-sm">
+                      <svg className="h-5 w-5 text-blue-500 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-gray-600">This URL will never expire and is ready to share</p>
+                    </div>
+                    
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <a 
+                        href="/dashboard" 
+                        className="text-blue-500 hover:text-blue-700 flex items-center"
+                      >
+                        <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        View all your shortened URLs
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
